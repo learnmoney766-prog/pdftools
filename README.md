@@ -20,6 +20,7 @@ PDF Toolkit is a free, client-side website for common PDF tasks. Files are read 
 
 ### Information and editing
 
+- Switch between light and dark themes; the choice is saved in this browser.
 - Count pages and inspect available PDF metadata.
 - Extract selectable text, copy it, or download it as a text file. Scanned-image OCR is not included.
 - Add page numbers or choose from 20 text watermark presets, custom typography/color, repeat patterns, and PNG/JPG/WEBP image marks.
@@ -65,7 +66,7 @@ pnpm preview
 
 Deploy the `dist/` directory to a static host. Netlify settings are checked into `netlify.toml`: `pnpm run build`, publish directory `dist`, and Node.js 24. `package.json` pins pnpm 11.25.0. Netlify's `URL` build variable supplies the canonical origin and sitemap automatically. Other hosts can set `SITE_URL` to the public HTTPS origin; without either value the build omits absolute canonical tags and the sitemap rather than publishing placeholders. The running app sets canonical and Open Graph URLs from its actual origin.
 
-Netlify uses the included `public/_redirects` SPA fallback as well as the generated direct-route HTML files. PDF processing, conversion, and downloads run entirely in the visitor's browser, so the app does not require Netlify Functions, API keys, a backend service, Python, or server-side filesystem access. Vercel can serve the generated route HTML files and uses clean URLs from `vercel.json`. GitHub Pages does not provide the same route fallback by default and needs a custom 404 fallback or a hash-based routing change.
+Netlify uses the included `public/_redirects` SPA fallback as well as the generated direct-route HTML files. PDF processing, conversion, and downloads run entirely in the visitor's browser, so the app does not require Netlify Functions, API keys, a backend service, Python, or server-side filesystem access.
 
 ## Routes
 

@@ -1,5 +1,6 @@
 import JSZip from 'jszip';
 import { MAX_CONVERSION_PAGES, loadPdfRenderLibrary, safeBaseName } from './pdf.ts';
+import { pdfJsDocumentOptions } from './pdfjs-options.ts';
 
 const MAX_CONVERT_BYTES = 100 * 1024 * 1024;
 export const OFFICE_MIME = {
@@ -19,7 +20,7 @@ export async function openPdfForConversion(file: File, signal: AbortSignal, load
   if (file.size > MAX_CONVERT_BYTES) throw new Error('This PDF is larger than 100 MB. Choose a smaller file.');
   if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') throw new Error('Choose a PDF file to convert.');
   const pdfjs = await loadRenderer();
-  const task = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) });
+  const task = pdfjs.getDocument(pdfJsDocumentOptions(new Uint8Array(await file.arrayBuffer())));
   try {
     const pdf = await task.promise;
     if (!pdf.numPages) throw new Error('This PDF has no pages.');

@@ -4,7 +4,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
-import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 import { createCanvas, DOMMatrix, ImageData, loadImage, Path2D } from '@napi-rs/canvas';
 import {
@@ -75,7 +74,7 @@ async function verifyPdf(name, blob, pageCount, inspect, expectedText = []) {
   const reopened = await PDFDocument.load(new Uint8Array(await readFile(filename)));
   assert.equal(reopened.getPageCount(), pageCount, `${name}: page count`);
   inspect?.(reopened);
-  const task = pdfjs.getDocument({ data: bytes.slice(), disableWorker: true, useSystemFonts: true, disableFontFace: true });
+  const task = pdfjs.getDocument({ data: bytes.slice(), disableWorker: true, useSystemFonts: true });
   const independent = await task.promise;
   assert.equal(independent.numPages, pageCount, `${name}: independent PDF.js page count`);
   const text = [];
@@ -266,7 +265,13 @@ await verifyPdf('custom-style-watermark', presetWatermark, 2, undefined, ['DRAFT
 
 const progress = [];
 const converterInput = await input('alpha.pdf');
-const renderer = async () => pdfjs;
+const renderer = async () => ({
+  ...pdfjs,
+  getDocument: (options) => {
+    const { standardFontDataUrl: _browserFontUrl, ...nodeOptions } = options;
+    return pdfjs.getDocument({ ...nodeOptions, useSystemFonts: true, disableFontFace: false });
+  },
+});
 const extractedText = await extractText(converterInput, signal, (done, total) => progress.push(`text:${done}/${total}`), renderer);
 assert.ok(extractedText.includes('ALPHA LANDSCAPE PAGE ONE') && extractedText.includes('ALPHA PORTRAIT PAGE TWO'));
 assert.equal(progress.filter((item) => item.startsWith('text:')).length, 2);
@@ -312,20 +317,20 @@ console.log(`PASS PDF to Word: ${word.blob.size} bytes, ${progress.filter((item)
 const excel = await pdfToExcel(converterInput, signal, (done, total) => progress.push(`excel:${done}/${total}`), renderer);
 assert.ok(excel.blob.size > 200);
 assert.ok(excel.name.endsWith('.xlsx'));
-const workbook = new ExcelJS.Workbook();
-await workbook.xlsx.load(await excel.blob.arrayBuffer());
-assert.equal(workbook.worksheets.length, 2);
-assert.ok(workbook.getWorksheet('Page 1').getRow(1).values.join(' ').includes('ALPHA LANDSCAPE PAGE ONE'));
+const workbook = await JSZip.loadAsync(excel.blob);
+const workbookXml = await workbook.file('xl/workbook.xml').async('string');
+assert.equal((workbookXml.match(/<sheet /g) ?? []).length, 2);
+const firstSheetXml = await workbook.file('xl/worksheets/sheet1.xml').async('string');
+assert.ok(firstSheetXml.includes('ALPHA LANDSCAPE PAGE ONE'));
 await writeFile(path.join(outDir, excel.name), new Uint8Array(await excel.blob.arrayBuffer()));
 checks += 4;
-console.log(`PASS PDF to Excel: ${excel.blob.size} bytes, ${workbook.worksheets.length} worksheets reopened with ExcelJS and cell content checked`);
+console.log(`PASS PDF to Excel: ${excel.blob.size} bytes, ${(workbookXml.match(/<sheet /g) ?? []).length} worksheets reopened with JSZip and cell content checked`);
 const tableWorkbookFile = await pdfToExcel(tableFile, signal, () => undefined, renderer);
-const tableWorkbook = new ExcelJS.Workbook();
-await tableWorkbook.xlsx.load(await tableWorkbookFile.blob.arrayBuffer());
+const tableWorkbook = await JSZip.loadAsync(tableWorkbookFile.blob);
+const firstSheetRows = await tableWorkbook.file('xl/worksheets/sheet1.xml').async('string');
+assert.ok(firstSheetRows.includes('Item') && firstSheetRows.includes('Quantity') && firstSheetRows.includes('Total'));
+assert.ok(firstSheetRows.includes('Product 1'));
 await writeFile(path.join(outDir, tableWorkbookFile.name), new Uint8Array(await tableWorkbookFile.blob.arrayBuffer()));
-const firstSheetRows = tableWorkbook.worksheets[0].getSheetValues().map((row) => Array.isArray(row) ? row.map(String).join(' | ') : '');
-assert.ok(firstSheetRows.some((row) => row.includes('Item') && row.includes('Quantity') && row.includes('Total')));
-assert.ok(firstSheetRows.some((row) => row.includes('Product 1')));
 checks += 2;
 console.log('PASS PDF table extraction: column-separated headers and product rows recovered into XLSX cells');
 await assert.rejects(pdfToWord(imageSourceFile, signal, () => undefined, renderer), /Scanned PDFs need OCR/);

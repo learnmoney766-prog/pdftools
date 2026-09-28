@@ -1,5 +1,6 @@
 import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import type { PDFDocument as PdfDocumentType } from 'pdf-lib';
+import { pdfJsDocumentOptions } from './pdfjs-options.ts';
 
 export const MAX_FILE_BYTES = 100 * 1024 * 1024;
 export const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
@@ -194,7 +195,7 @@ export async function readMetadata(file: File) {
 export async function extractText(file: File, signal: AbortSignal, onProgress: (page: number, total: number) => void, loadRenderer: typeof loadPdfRenderLibrary = loadPdfRenderLibrary) {
   const pdfjs = await loadRenderer();
   const data = new Uint8Array(await file.arrayBuffer());
-  const loading = pdfjs.getDocument({ data });
+  const loading = pdfjs.getDocument(pdfJsDocumentOptions(data));
   try {
     const pdf = await loading.promise;
     if (pdf.numPages > MAX_TEXT_PAGES) throw new Error(`This PDF has ${pdf.numPages} pages. Text extraction is limited to ${MAX_TEXT_PAGES} pages at a time.`);
@@ -215,7 +216,7 @@ export async function extractText(file: File, signal: AbortSignal, onProgress: (
 
 export async function renderPagesToImages(file: File, pages: number[], format: 'jpeg' | 'png', scale: number, quality: number, signal: AbortSignal, onProgress: (page: number, total: number) => void, loadRenderer: typeof loadPdfRenderLibrary = loadPdfRenderLibrary) {
   const pdfjs = await loadRenderer();
-  const loading = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) });
+  const loading = pdfjs.getDocument(pdfJsDocumentOptions(new Uint8Array(await file.arrayBuffer())));
   try {
     const pdf = await loading.promise;
     if (pages.length > MAX_CONVERSION_PAGES) throw new Error(`Choose ${MAX_CONVERSION_PAGES} pages or fewer for this browser conversion.`);
@@ -245,7 +246,7 @@ export async function renderPagesToImages(file: File, pages: number[], format: '
 
 export async function compressPdfAsImages(file: File, quality: number, scale: number, signal: AbortSignal, onProgress: (page: number, total: number) => void, loadRenderer: typeof loadPdfRenderLibrary = loadPdfRenderLibrary) {
   const pdfjs = await loadRenderer();
-  const loading = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) });
+  const loading = pdfjs.getDocument(pdfJsDocumentOptions(new Uint8Array(await file.arrayBuffer())));
   try {
     const source = await loading.promise;
     if (source.numPages > MAX_COMPRESSION_PAGES) throw new Error(`This browser-based compressor supports up to ${MAX_COMPRESSION_PAGES} pages at a time.`);
@@ -453,7 +454,7 @@ export async function makeZip(files: { name: string; blob: Blob }[]) {
 
 export async function getPagePreviews(file: File, signal: AbortSignal, onProgress: (page: number, total: number) => void) {
   const pdfjs = await loadPdfRenderLibrary();
-  const loading = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) });
+  const loading = pdfjs.getDocument(pdfJsDocumentOptions(new Uint8Array(await file.arrayBuffer())));
   try {
     const pdf = await loading.promise;
     if (pdf.numPages > MAX_RENDER_PAGES) return { count: pdf.numPages, previews: [] as { page: number; url: string }[] };

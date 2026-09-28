@@ -1,9 +1,10 @@
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
+await cp(path.join(root, 'node_modules', 'pdfjs-dist', 'standard_fonts'), path.join(dist, 'pdfjs', 'standard_fonts'), { recursive: true });
 const tools = JSON.parse(await readFile(path.join(root, 'src/data/tools-data.json'), 'utf8'));
 const template = await readFile(path.join(dist, 'index.html'), 'utf8');
 const baseUrl = process.env.SITE_URL?.trim() || process.env.VITE_SITE_URL?.trim() || process.env.URL?.trim() || '';

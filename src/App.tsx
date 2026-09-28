@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { ArrowDown, ArrowRight, ChevronDown, FileText, Menu, X } from 'lucide-react';
+import { ArrowDown, ArrowRight, ChevronDown, FileText, Menu, Moon, Sun, X } from 'lucide-react';
 import { Link, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import { categories, toolHref } from './data/tools';
@@ -51,9 +51,24 @@ function Header({ mobileOpen, setMobileOpen, categoriesOpen, setCategoriesOpen }
         <a className="mobile-nav-cta" href="/#tools">Find a tool <ArrowDown size={15} /></a>
       </nav>
       <a className="header-cta" href="/#tools">Explore tools <ArrowRight size={15} /></a>
+      <ThemeToggle />
       <button className="mobile-menu-toggle" aria-label={mobileOpen ? 'Close menu' : 'Open menu'} aria-expanded={mobileOpen} type="button" onClick={() => setMobileOpen(!mobileOpen)}>{mobileOpen ? <X size={21} /> : <Menu size={21} />}</button>
     </div>
   </header>;
+}
+
+function ThemeToggle() {
+  const [dark, setDark] = useState(() => document.documentElement.dataset.theme === 'dark');
+  function toggleTheme() {
+    const next = dark ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute('content', next === 'dark' ? '#111a1c' : '#f5f7f6');
+    try { localStorage.setItem('pdf-toolkit-theme', next); } catch { /* Theme still applies for this page when storage is unavailable. */ }
+    setDark(next === 'dark');
+  }
+  return <button className="theme-toggle" type="button" onClick={toggleTheme} aria-label={`Switch to ${dark ? 'light' : 'dark'} mode`} aria-pressed={dark} title={`Switch to ${dark ? 'light' : 'dark'} mode`}>
+    {dark ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}<span>{dark ? 'Dark' : 'Light'}</span>
+  </button>;
 }
 
 function ToolLoading() {
