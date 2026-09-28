@@ -6,7 +6,7 @@
   "packageManager": "pnpm@11.25.0",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "vite build && node scripts/generate-routes.mjs",
+    "build": "vite build && node scripts/generate-routes.mjs && node scripts/verify-production-output.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "typecheck": "tsc --noEmit",
     "qa:pdf-integrity": "node scripts/qa-pdf-integrity.mjs"
