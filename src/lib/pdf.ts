@@ -191,8 +191,8 @@ export async function readMetadata(file: File) {
   }
 }
 
-export async function extractText(file: File, signal: AbortSignal, onProgress: (page: number, total: number) => void) {
-  const pdfjs = await loadPdfRenderLibrary();
+export async function extractText(file: File, signal: AbortSignal, onProgress: (page: number, total: number) => void, loadRenderer: typeof loadPdfRenderLibrary = loadPdfRenderLibrary) {
+  const pdfjs = await loadRenderer();
   const data = new Uint8Array(await file.arrayBuffer());
   const loading = pdfjs.getDocument({ data });
   try {
@@ -213,8 +213,8 @@ export async function extractText(file: File, signal: AbortSignal, onProgress: (
   }
 }
 
-export async function renderPagesToImages(file: File, pages: number[], format: 'jpeg' | 'png', scale: number, quality: number, signal: AbortSignal, onProgress: (page: number, total: number) => void) {
-  const pdfjs = await loadPdfRenderLibrary();
+export async function renderPagesToImages(file: File, pages: number[], format: 'jpeg' | 'png', scale: number, quality: number, signal: AbortSignal, onProgress: (page: number, total: number) => void, loadRenderer: typeof loadPdfRenderLibrary = loadPdfRenderLibrary) {
+  const pdfjs = await loadRenderer();
   const loading = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) });
   try {
     const pdf = await loading.promise;
@@ -243,8 +243,8 @@ export async function renderPagesToImages(file: File, pages: number[], format: '
   }
 }
 
-export async function compressPdfAsImages(file: File, quality: number, scale: number, signal: AbortSignal, onProgress: (page: number, total: number) => void) {
-  const pdfjs = await loadPdfRenderLibrary();
+export async function compressPdfAsImages(file: File, quality: number, scale: number, signal: AbortSignal, onProgress: (page: number, total: number) => void, loadRenderer: typeof loadPdfRenderLibrary = loadPdfRenderLibrary) {
+  const pdfjs = await loadRenderer();
   const loading = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) });
   try {
     const source = await loading.promise;
@@ -301,13 +301,26 @@ export async function addPageNumbers(file: File, start: number, position: 'top' 
   return savePdf(doc);
 }
 
-export async function addWatermark(file: File, text: string, size: number, opacity: number, angle: number, position: 'center' | 'top-left' | 'bottom-right', signal: AbortSignal) {
+export type WatermarkPosition = 'center' | 'top-left' | 'top-center' | 'top-right' | 'center-left' | 'center-right' | 'bottom-left' | 'bottom-center' | 'bottom-right' | 'header' | 'footer';
+export type TextWatermarkOptions = { color?: string; font?: 'Helvetica' | 'TimesRoman' | 'Courier'; bold?: boolean; tiled?: boolean; outline?: boolean };
+
+function parseHexColor(value: string) {
+  const hex = value.replace(/^#/, '');
+  if (!/^[0-9a-f]{6}$/i.test(hex)) throw new Error('Choose a valid six-digit watermark color.');
+  return rgb(parseInt(hex.slice(0, 2), 16) / 255, parseInt(hex.slice(2, 4), 16) / 255, parseInt(hex.slice(4, 6), 16) / 255);
+}
+
+export async function addWatermark(file: File, text: string, size: number, opacity: number, angle: number, position: WatermarkPosition, signal: AbortSignal, options: TextWatermarkOptions = {}) {
   const doc = await loadPdf(file);
-  const font = await doc.embedFont(StandardFonts.HelveticaBold);
+  const fontKey = options.font === 'TimesRoman' ? (options.bold ? StandardFonts.TimesRomanBold : StandardFonts.TimesRoman)
+    : options.font === 'Courier' ? (options.bold ? StandardFonts.CourierBold : StandardFonts.Courier)
+      : (options.bold === false ? StandardFonts.Helvetica : StandardFonts.HelveticaBold);
+  const font = await doc.embedFont(fontKey);
   const label = text.replace(/\s+/g, ' ').trim();
   if (!label) throw new Error('Enter watermark text before applying it.');
   if (label.length > 80) throw new Error('Watermark text can contain up to 80 characters.');
   if (!Number.isFinite(size) || size < 1 || !Number.isFinite(opacity) || opacity < 0 || opacity > 1 || !Number.isFinite(angle)) throw new Error('Check the watermark size, opacity, and rotation values.');
+  const color = parseHexColor(options.color ?? '#3d616e');
   doc.getPages().forEach((page) => {
     const { width, height } = page.getSize();
     try { font.widthOfTextAtSize(label, size); }
@@ -337,11 +350,72 @@ export async function addWatermark(file: File, text: string, size: number, opaci
     const bounds = boundsAt(fittedSize);
     const boxWidth = bounds.maxX - bounds.minX;
     const boxHeight = bounds.maxY - bounds.minY;
-    const centerX = position === 'top-left' ? margin + boxWidth / 2 : position === 'bottom-right' ? width - margin - boxWidth / 2 : width / 2;
-    const centerY = position === 'top-left' ? height - margin - boxHeight / 2 : position === 'bottom-right' ? margin + boxHeight / 2 : height / 2;
-    const x = centerX - (bounds.minX + bounds.maxX) / 2;
-    const y = centerY - (bounds.minY + bounds.maxY) / 2;
-    page.drawText(label, { x, y, size: fittedSize, font, color: rgb(0.24, 0.38, 0.43), opacity, rotate: degrees(angle) });
+    const horizontal = position.includes('left') ? 'left' : position.includes('right') ? 'right' : 'center';
+    const vertical = position === 'header' || position.startsWith('top-') ? 'top' : position === 'footer' || position.startsWith('bottom-') ? 'bottom' : 'center';
+    const centerX = horizontal === 'left' ? margin + boxWidth / 2 : horizontal === 'right' ? width - margin - boxWidth / 2 : width / 2;
+    const centerY = vertical === 'top' ? height - margin - boxHeight / 2 : vertical === 'bottom' ? margin + boxHeight / 2 : height / 2;
+    const baseX = centerX - (bounds.minX + bounds.maxX) / 2;
+    const baseY = centerY - (bounds.minY + bounds.maxY) / 2;
+    const draw = (x: number, y: number, opacityScale = 1) => page.drawText(label, { x, y, size: fittedSize, font, color, opacity: opacity * opacityScale, rotate: degrees(angle) });
+    if (options.tiled) {
+      const stepX = Math.max(boxWidth + fittedSize * 2.2, 110);
+      const stepY = Math.max(boxHeight + fittedSize * 2.4, 90);
+      const rows = Math.min(18, Math.ceil(height / stepY));
+      const columns = Math.min(18, Math.ceil(width / stepX));
+      for (let row = 0; row < rows; row += 1) {
+        for (let column = 0; column < columns; column += 1) draw(column * stepX + margin, row * stepY + margin, 0.72);
+      }
+    } else if (options.outline) {
+      const offset = Math.max(0.45, fittedSize / 45);
+      for (const [dx, dy] of [[-offset, 0], [offset, 0], [0, -offset], [0, offset]] as const) draw(baseX + dx, baseY + dy, 0.25);
+      draw(baseX, baseY, 0.72);
+    } else draw(baseX, baseY);
+  });
+  assertActive(signal);
+  return savePdf(doc);
+}
+
+export type ImageWatermarkOptions = { opacity: number; size: number; angle: number; position: WatermarkPosition; tiled: boolean };
+
+async function readWatermarkImage(file: File) {
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) && !/\.(png|jpe?g|webp)$/i.test(file.name)) throw new Error('Choose a PNG, JPG, JPEG, or WEBP image for the watermark.');
+  if (file.size === 0 || file.size > MAX_IMAGE_BYTES) throw new Error('The watermark image must be non-empty and no larger than 25 MB.');
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')) return { bytes, format: 'png' as const };
+  if (file.type === 'image/jpeg' || /\.jpe?g$/i.test(file.name)) return { bytes, format: 'jpg' as const };
+  const source = await createImageBitmap(file);
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = source.width; canvas.height = source.height;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('This browser could not prepare the watermark image.');
+    context.drawImage(source, 0, 0);
+    const blob = await canvasToBlob(canvas, 'image/png', 1);
+    canvas.width = 0; canvas.height = 0;
+    return { bytes: new Uint8Array(await blob.arrayBuffer()), format: 'png' as const };
+  } finally { source.close(); }
+}
+
+export async function addImageWatermark(file: File, imageFile: File, options: ImageWatermarkOptions, signal: AbortSignal) {
+  const doc = await loadPdf(file);
+  const imageData = await readWatermarkImage(imageFile);
+  const image = imageData.format === 'jpg' ? await doc.embedJpg(imageData.bytes) : await doc.embedPng(imageData.bytes);
+  if (!Number.isFinite(options.opacity) || options.opacity < 0 || options.opacity > 1 || !Number.isFinite(options.size) || options.size < 1 || !Number.isFinite(options.angle)) throw new Error('Check the image watermark size, opacity, and rotation values.');
+  doc.getPages().forEach((page) => {
+    const { width, height } = page.getSize();
+    const imageWidth = Math.min(width * 0.8, options.size);
+    const imageHeight = imageWidth * image.height / image.width;
+    const x = options.position.includes('left') ? 18 : options.position.includes('right') ? width - imageWidth - 18 : (width - imageWidth) / 2;
+    const y = options.position === 'header' || options.position.startsWith('top-') ? height - imageHeight - 18
+      : options.position === 'footer' || options.position.startsWith('bottom-') ? 18 : (height - imageHeight) / 2;
+    if (options.tiled) {
+      const stepX = Math.max(imageWidth + 80, 130); const stepY = Math.max(imageHeight + 80, 120);
+      const rows = Math.min(18, Math.ceil(height / stepY)); const columns = Math.min(18, Math.ceil(width / stepX));
+      for (let row = 0; row < rows; row += 1) for (let column = 0; column < columns; column += 1) {
+        const tileY = row * stepY; const tileX = column * stepX;
+        page.drawImage(image, { x: tileX, y: tileY, width: Math.min(imageWidth, width - tileX), height: Math.min(imageHeight, height - tileY), opacity: options.opacity * 0.72, rotate: degrees(options.angle) });
+      }
+    } else page.drawImage(image, { x, y, width: imageWidth, height: imageHeight, opacity: options.opacity, rotate: degrees(options.angle) });
   });
   assertActive(signal);
   return savePdf(doc);

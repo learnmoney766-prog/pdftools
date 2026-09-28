@@ -16,12 +16,14 @@ PDF Toolkit is a free, client-side website for common PDF tasks. Files are read 
 
 - Convert JPG/JPEG or PNG images into a PDF, with image order, page size, and orientation controls.
 - Render selected PDF pages as JPG or PNG and download the images in a ZIP file.
+- Convert selectable PDF text to editable DOCX paragraphs or page-based XLSX worksheets, and convert each PDF page to a visual PowerPoint slide.
 
 ### Information and editing
 
 - Count pages and inspect available PDF metadata.
 - Extract selectable text, copy it, or download it as a text file. Scanned-image OCR is not included.
-- Add page numbers or a text watermark.
+- Add page numbers or choose from 20 text watermark presets, custom typography/color, repeat patterns, and PNG/JPG/WEBP image marks.
+- Activate Free Pro locally to unlock the advanced watermark styles. There is no payment or card flow; an ad placement is reserved for a future provider.
 - Compress by rebuilding each page as a JPEG image and measure the actual file-size change.
 
 ## Technology
@@ -31,9 +33,10 @@ PDF Toolkit is a free, client-side website for common PDF tasks. Files are read 
 - `pdf-lib` for PDF editing and page operations
 - Mozilla PDF.js for rendering, thumbnails, and text extraction
 - JSZip for bundled page-image downloads
+- docx, ExcelJS, and PptxGenJS for Office format generation
 - Lucide icons and custom responsive CSS
 
-PDF.js is dynamically imported when page rendering is needed. The home page does not load the PDF editing or rendering engines.
+PDF.js and each Office converter are dynamically imported when needed. The home page does not load the PDF editing, rendering, or Office generation engines.
 
 Before a PDF download is exposed, the saved bytes are reopened with `pdf-lib` and the page count is checked. Image ZIP files are reopened and their entry names, sizes, MIME types, and PNG/JPEG signatures are validated. The repeatable integrity suite additionally reopens PDF output bytes with PDF.js and checks page content/order.
 
@@ -81,9 +84,12 @@ Selected documents are accessed through the browser File API. `pdf-lib`, PDF.js,
 - Browser support and available memory limit file size. PDFs are capped at 100 MB each. Images are capped at 25 MB each and 100 MB total per selection.
 - Page thumbnails are generated for up to 80 pages. Larger files can use page ranges for extraction, deletion, or rotation; page reordering with previews is limited to 80 pages.
 - PDF-to-image conversion and image-based compression are limited to 40 pages per operation to keep browser memory use bounded.
+- DOCX, XLSX, and PPTX conversion are limited to 40 pages and 100 MB per PDF. Word paragraphs and table columns are inferred from PDF text positions; complex layout may need cleanup. Scanned pages need OCR, which is not included. PowerPoint slides are page images for visual fidelity, not editable page text. Mixed-size source pages are fitted proportionally onto widescreen slides.
 - Compression rasterizes every page as JPEG. It removes selectable text, links, forms, vector detail, metadata, and accessibility structure, and may increase file size. The UI reports the measured result and does not promise a fixed reduction.
 - Text extraction reads selectable PDF text only; it does not perform OCR.
 - Watermark text is fitted to each page when needed. The built-in standard font supports Latin and Western European characters; unsupported Unicode is rejected with a clear error instead of creating a misleading download.
+- PNG transparency is preserved in image watermarks. JPG and WEBP watermarks are converted to PNG in the browser before embedding. Free Pro activation is stored in this browser’s local storage and does not create a paid subscription. No advertising provider is configured in this project; the reserved ad area is a placeholder.
+- Contact Us opens WhatsApp at the Ghana number +233 24 126 7186.
 - Password-protected, malformed, and some uncommon PDF features may not be supported by the browser libraries.
 - PNG transparency is displayed against a white background in the resulting PDF.
 - The contact page intentionally does not invent a support address; add a real project contact before public launch.

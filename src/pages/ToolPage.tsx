@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Check, Clipboard, Info, LoaderCircle, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowRight, Check, Clipboard, Info, Image as ImageIcon, LoaderCircle, ShieldCheck, Sparkles, Unlock } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { toolBySlug, toolHref } from '../data/tools';
 import type { ToolSpec } from '../data/tools';
 import {
-  addPageNumbers, addWatermark, compressPdfAsImages, extractText, formatBytes, imagesToPdf,
+  addImageWatermark, addPageNumbers, addWatermark, compressPdfAsImages, extractText, formatBytes, imagesToPdf,
   makePdfFromPages, makePdfWithoutPages, makeZip, mergePdfs, parsePageRanges,
   readMetadata, renderPagesToImages, rotatePdf, safeBaseName,
   MAX_COMPRESSION_PAGES, MAX_CONVERSION_PAGES, MAX_RENDER_PAGES, validateFiles,
 } from '../lib/pdf';
+import type { TextWatermarkOptions, WatermarkPosition } from '../lib/pdf';
+import { isFreeProActivated, persistFreeProActivation } from '../lib/free-pro';
 import {
   FileDropZone, FileListEditor, OutputCard, PDFPageSelector, PrivacyNote, ResetButton,
   StatusMessage, useToolProcessor,
@@ -18,6 +20,29 @@ import type { ReactNode } from 'react';
 import { useSeo } from '../useSeo';
 
 function slugForTitle(title: string) { return `${title} | PDF Toolkit`; }
+
+const watermarkStyles: { id: string; label: string; text: string; size: number; opacity: number; angle: number; position: WatermarkPosition; color: string; font: TextWatermarkOptions['font']; bold: boolean; tiled?: boolean; outline?: boolean }[] = [
+  { id: 'classic', label: 'Classic', text: 'CONFIDENTIAL', size: 36, opacity: .28, angle: 0, position: 'center', color: '#496d70', font: 'TimesRoman', bold: true },
+  { id: 'minimal', label: 'Minimal', text: 'PRIVATE', size: 15, opacity: .3, angle: 0, position: 'bottom-right', color: '#758783', font: 'Helvetica', bold: false },
+  { id: 'bold', label: 'Bold', text: 'OFFICIAL', size: 64, opacity: .3, angle: 0, position: 'center', color: '#263f55', font: 'Helvetica', bold: true },
+  { id: 'modern', label: 'Modern', text: 'PREVIEW', size: 28, opacity: .55, angle: -25, position: 'center', color: '#198675', font: 'Helvetica', bold: true },
+  { id: 'elegant', label: 'Elegant', text: 'COPY', size: 45, opacity: .35, angle: -35, position: 'center', color: '#996d84', font: 'TimesRoman', bold: false },
+  { id: 'confidential', label: 'Confidential', text: 'CONFIDENTIAL', size: 42, opacity: .48, angle: -35, position: 'center', color: '#8a3434', font: 'Helvetica', bold: true },
+  { id: 'draft', label: 'Draft', text: 'DRAFT', size: 58, opacity: .26, angle: -35, position: 'center', color: '#9b5e30', font: 'Helvetica', bold: true },
+  { id: 'copy', label: 'Copy', text: 'COPY', size: 32, opacity: .4, angle: 0, position: 'top-left', color: '#8c3e3e', font: 'Courier', bold: true },
+  { id: 'preview', label: 'Preview', text: 'PREVIEW', size: 24, opacity: .34, angle: 0, position: 'header', color: '#657b8a', font: 'Helvetica', bold: false },
+  { id: 'sample', label: 'Sample', text: 'SAMPLE', size: 42, opacity: .3, angle: -20, position: 'center', color: '#896d28', font: 'TimesRoman', bold: true },
+  { id: 'protected', label: 'Protected', text: 'PROTECTED', size: 34, opacity: .3, angle: -30, position: 'center', color: '#40528c', font: 'Courier', bold: true },
+  { id: 'diagonal', label: 'Diagonal', text: 'CONFIDENTIAL', size: 44, opacity: .24, angle: -45, position: 'center', color: '#4e7778', font: 'Helvetica', bold: true },
+  { id: 'large', label: 'Large center', text: 'COPY', size: 78, opacity: .22, angle: 0, position: 'center', color: '#54717a', font: 'Helvetica', bold: true },
+  { id: 'corner', label: 'Small corner', text: 'INTERNAL', size: 16, opacity: .55, angle: 0, position: 'bottom-right', color: '#397c68', font: 'Courier', bold: true },
+  { id: 'pattern', label: 'Repeated pattern', text: 'SAMPLE', size: 24, opacity: .18, angle: -35, position: 'center', color: '#577f88', font: 'Helvetica', bold: true, tiled: true },
+  { id: 'header', label: 'Header', text: 'COMPANY NAME', size: 18, opacity: .5, angle: 0, position: 'header', color: '#2d8478', font: 'Helvetica', bold: true },
+  { id: 'footer', label: 'Footer', text: 'CONTROLLED COPY', size: 14, opacity: .55, angle: 0, position: 'footer', color: '#6d7774', font: 'Courier', bold: false },
+  { id: 'stamp', label: 'Stamp', text: 'APPROVED', size: 35, opacity: .68, angle: -12, position: 'center', color: '#328064', font: 'Courier', bold: true, outline: true },
+  { id: 'outline', label: 'Outline', text: 'PREVIEW', size: 40, opacity: .36, angle: 0, position: 'center', color: '#3775a0', font: 'Helvetica', bold: true, outline: true },
+  { id: 'light', label: 'Light', text: 'CONFIDENTIAL', size: 36, opacity: .12, angle: -30, position: 'center', color: '#6a99a7', font: 'Helvetica', bold: false },
+];
 
 export function ToolRoute() {
   const { slug } = useParams();
@@ -70,10 +95,20 @@ function ToolWorkspace({ tool }: { tool: ToolSpec }) {
   const [pageAlign, setPageAlign] = useState<'left' | 'center' | 'right'>('center');
   const [startNumber, setStartNumber] = useState(1);
   const [watermark, setWatermark] = useState('CONFIDENTIAL');
-  const [watermarkPosition, setWatermarkPosition] = useState<'center' | 'top-left' | 'bottom-right'>('center');
+  const [watermarkPosition, setWatermarkPosition] = useState<WatermarkPosition>('center');
   const [watermarkOpacity, setWatermarkOpacity] = useState(0.2);
   const [watermarkAngle, setWatermarkAngle] = useState(0);
   const [watermarkSize, setWatermarkSize] = useState(36);
+  const [watermarkColor, setWatermarkColor] = useState('#3d616e');
+  const [watermarkFont, setWatermarkFont] = useState<TextWatermarkOptions['font']>('Helvetica');
+  const [watermarkBold, setWatermarkBold] = useState(true);
+  const [watermarkTiled, setWatermarkTiled] = useState(false);
+  const [watermarkOutline, setWatermarkOutline] = useState(false);
+  const [watermarkMode, setWatermarkMode] = useState<'text' | 'image'>('text');
+  const [watermarkImage, setWatermarkImage] = useState<File | null>(null);
+  const [imageWatermarkSize, setImageWatermarkSize] = useState(180);
+  const [freePro, setFreePro] = useState(() => isFreeProActivated());
+  const [watermarkPreset, setWatermarkPreset] = useState('classic');
   const [infoValues, setInfoValues] = useState<[string, string][] | null>(null);
   const [infoBusy, setInfoBusy] = useState(false);
   const [infoError, setInfoError] = useState('');
@@ -82,6 +117,22 @@ function ToolWorkspace({ tool }: { tool: ToolSpec }) {
   const [copied, setCopied] = useState(false);
   const isInfoTool = tool.slug === 'pdf-page-counter' || tool.slug === 'pdf-metadata';
   const processorFile = processor.files[0];
+  const watermarkImageUrl = useMemo(() => watermarkImage ? URL.createObjectURL(watermarkImage) : '', [watermarkImage]);
+  useEffect(() => () => { if (watermarkImageUrl) URL.revokeObjectURL(watermarkImageUrl); }, [watermarkImageUrl]);
+
+  function activateFreePro() {
+    setFreePro(true);
+    persistFreeProActivation();
+  }
+
+  function applyWatermarkPreset(id: string) {
+    const preset = watermarkStyles.find((style) => style.id === id);
+    if (!preset || !freePro) return;
+    setWatermarkPreset(id); setWatermark(preset.text); setWatermarkSize(preset.size); setWatermarkOpacity(preset.opacity);
+    setWatermarkAngle(preset.angle); setWatermarkPosition(preset.position); setWatermarkColor(preset.color);
+    setWatermarkFont(preset.font); setWatermarkBold(preset.bold); setWatermarkTiled(!!preset.tiled); setWatermarkOutline(!!preset.outline);
+    setWatermarkMode('text');
+  }
 
   useEffect(() => {
     if (!isInfoTool || !processorFile) { setInfoValues(null); setInfoBusy(false); setInfoError(''); return; }
@@ -126,6 +177,10 @@ function ToolWorkspace({ tool }: { tool: ToolSpec }) {
     setSelectedPages(pages); setAllPages(pages.length === pageCount && pageCount > 0);
   }
   const previewSelection = isPageImages && allPages ? Array.from({ length: pageCount }, (_, index) => index + 1) : selectedPages;
+  const previewX = watermarkPosition.includes('left') ? '12%' : watermarkPosition.includes('right') ? '88%' : '50%';
+  const previewY = watermarkPosition === 'header' || watermarkPosition.startsWith('top-') ? '14%'
+    : watermarkPosition === 'footer' || watermarkPosition.startsWith('bottom-') ? '86%' : '50%';
+  const watermarkPreviewPlacement = { position: 'absolute' as const, left: previewX, top: previewY, transform: `translate(-50%, -50%) rotate(${watermarkAngle}deg)` };
 
   const canRun = useMemo(() => {
     if (!processor.files.length || processor.busy) return false;
@@ -138,9 +193,9 @@ function ToolWorkspace({ tool }: { tool: ToolSpec }) {
     if (tool.slug === 'rotate-pdf') return pageCount > 0;
     if (tool.slug === 'compress-pdf') return pageCount > 0 && pageCount <= MAX_COMPRESSION_PAGES;
     if (tool.slug === 'pdf-text-extractor') return true;
-    if (tool.slug === 'add-watermark') return watermark.trim().length > 0;
+    if (tool.slug === 'add-watermark') return watermarkMode === 'image' ? !!watermarkImage : watermark.trim().length > 0;
     return true;
-  }, [processor.files.length, processor.busy, tool.slug, selectedPages.length, pageCount, range, allPages, watermark]);
+  }, [processor.files.length, processor.busy, tool.slug, selectedPages.length, pageCount, range, allPages, watermark, watermarkMode, watermarkImage]);
 
   async function process() {
     if (!processor.files.length) return;
@@ -151,6 +206,21 @@ function ToolWorkspace({ tool }: { tool: ToolSpec }) {
     setRangeError('');
     await processor.run(async (signal): Promise<ToolOutput> => {
       const file = processor.files[0];
+      if (tool.slug === 'pdf-to-word') {
+        const { pdfToWord } = await import('../lib/convert-word');
+        const result = await pdfToWord(file, signal, (done, total) => processor.setProgress(`Converting page ${done} of ${total} to editable text…`));
+        return { title: 'Word document is ready', details: 'Text and basic paragraph emphasis were converted. Review the layout in Word.', files: [result] };
+      }
+      if (tool.slug === 'pdf-to-excel') {
+        const { pdfToExcel } = await import('../lib/convert-excel');
+        const result = await pdfToExcel(file, signal, (done, total) => processor.setProgress(`Reading table-like text on page ${done} of ${total}…`));
+        return { title: 'Excel workbook is ready', details: 'Each PDF page is a worksheet. Column placement is estimated from text spacing; review complex tables.', files: [result] };
+      }
+      if (tool.slug === 'pdf-to-powerpoint') {
+        const { pdfToPowerPoint } = await import('../lib/convert-powerpoint');
+        const result = await pdfToPowerPoint(file, signal, (done, total) => processor.setProgress(`Rendering slide ${done} of ${total}…`));
+        return { title: 'PowerPoint is ready', details: 'One image-based slide was created for each PDF page.', files: [result] };
+      }
       if (tool.slug === 'merge-pdf') {
         const blob = await mergePdfs(processor.files, signal);
         return { title: 'Your PDFs are merged', details: `${processor.files.length} files combined into one document.`, files: [{ name: 'merged.pdf', blob }] };
@@ -205,8 +275,11 @@ function ToolWorkspace({ tool }: { tool: ToolSpec }) {
         return { title: 'Page numbers added', details: `Starting at ${startNumber}, aligned ${pageAlign} at the ${pagePosition} of each page.`, files: [{ name: `${safeBaseName(file.name)}-numbered.pdf`, blob }] };
       }
       if (tool.slug === 'add-watermark') {
-        const blob = await addWatermark(file, watermark.trim(), watermarkSize, watermarkOpacity, watermarkAngle, watermarkPosition, signal);
-        return { title: 'Watermark added', details: `“${watermark.trim()}” applied to ${pageCount === 1 ? 'the page' : 'each page'}.`, files: [{ name: `${safeBaseName(file.name)}-watermarked.pdf`, blob }] };
+        const blob = watermarkMode === 'image' && watermarkImage
+          ? await addImageWatermark(file, watermarkImage, { opacity: watermarkOpacity, size: imageWatermarkSize, angle: watermarkAngle, position: watermarkPosition, tiled: freePro && watermarkTiled }, signal)
+          : await addWatermark(file, watermark.trim(), watermarkSize, watermarkOpacity, watermarkAngle, watermarkPosition, signal, { color: freePro ? watermarkColor : '#3d616e', font: freePro ? watermarkFont : 'Helvetica', bold: freePro ? watermarkBold : true, tiled: freePro && watermarkTiled, outline: freePro && watermarkOutline });
+        const label = watermarkMode === 'image' ? 'Image watermark' : `“${watermark.trim()}”`;
+        return { title: 'Watermark added', details: `${label} applied to ${pageCount === 1 ? 'the page' : 'each page'}.`, files: [{ name: `${safeBaseName(file.name)}-watermarked.pdf`, blob }] };
       }
       throw new Error('This tool is not available.');
     });
@@ -228,6 +301,7 @@ function ToolWorkspace({ tool }: { tool: ToolSpec }) {
     <FileDropZone kind={fileKind} multiple={tool.multiple} onSelect={selectFiles} disabled={processor.busy} />
     <FileListEditor files={processor.files} onChange={acceptFiles} disabled={processor.busy} previews={isImageConversion} />
     {uploadError && <StatusMessage error={uploadError} />}
+    {tool.slug === 'add-watermark' && !processorFile && <section className={`free-pro-card${freePro ? ' is-active' : ''}`} aria-live="polite"><div><span className="eyebrow">{freePro ? '✓ Pro activated' : 'Pro features'}</span><strong>{freePro ? 'Advanced watermark tools unlocked' : 'Unlock advanced watermark tools — FREE'}</strong><p>Pro is free. Supported by advertising; no payment or card is required.</p></div>{!freePro && <button type="button" className="button button-primary" onClick={activateFreePro}><Unlock size={15} />Activate Free Pro</button>}</section>}
 
     {tool.slug === 'merge-pdf' && processor.files.length > 0 && processor.files.length < 2 && <p className="notice notice-muted">Add at least one more PDF to merge them.</p>}
 
@@ -262,7 +336,45 @@ function ToolWorkspace({ tool }: { tool: ToolSpec }) {
       </>}
       {tool.slug === 'compress-pdf' && <div className="compression-callout"><Info size={18} /><div><strong>Content becomes images</strong><p>To reduce size, each page is rendered as a JPEG image. Text, links, forms, and vector graphics will no longer be editable or searchable. The final size change is measured after processing.</p></div><div className="option-grid"><Field label="Image quality"><select className="text-input" value={compressQuality} onChange={(event) => setCompressQuality(Number(event.target.value))}><option value={0.55}>Smaller file · lower quality</option><option value={0.72}>Balanced</option><option value={0.88}>Sharper · larger file</option></select></Field><Field label="Page resolution"><select className="text-input" value={compressScale} onChange={(event) => setCompressScale(Number(event.target.value))}><option value={0.75}>Lower resolution</option><option value={1}>Standard</option><option value={1.25}>Higher resolution</option></select></Field></div></div>}
       {tool.slug === 'add-page-numbers' && <div className="option-grid"><Field label="First number"><input className="text-input" type="number" min={0} max={99999} value={startNumber} onChange={(event) => setStartNumber(Math.max(0, Math.min(99999, Number(event.target.value) || 0)))} /></Field><Field label="Position"><select className="text-input" value={pagePosition} onChange={(event) => setPagePosition(event.target.value as typeof pagePosition)}><option value="bottom">Bottom</option><option value="top">Top</option></select></Field><Field label="Alignment"><select className="text-input" value={pageAlign} onChange={(event) => setPageAlign(event.target.value as typeof pageAlign)}><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></Field></div>}
-      {tool.slug === 'add-watermark' && <div className="watermark-fields"><Field label="Watermark text"><input className="text-input" maxLength={80} value={watermark} onChange={(event) => setWatermark(event.target.value)} placeholder="Enter a short label" /></Field><div className="option-grid"><Field label="Position"><select className="text-input" value={watermarkPosition} onChange={(event) => setWatermarkPosition(event.target.value as typeof watermarkPosition)}><option value="center">Center</option><option value="top-left">Top left</option><option value="bottom-right">Bottom right</option></select></Field><Field label="Text size"><input className="text-input" type="number" min={10} max={100} value={watermarkSize} onChange={(event) => setWatermarkSize(Math.max(10, Math.min(100, Number(event.target.value) || 10)))} /></Field><Field label={`Opacity · ${Math.round(watermarkOpacity * 100)}%`}><input type="range" min={0.08} max={0.7} step={0.02} value={watermarkOpacity} onChange={(event) => setWatermarkOpacity(Number(event.target.value))} /></Field><Field label={`Rotation · ${watermarkAngle}°`}><input type="range" min={-60} max={60} step={5} value={watermarkAngle} onChange={(event) => setWatermarkAngle(Number(event.target.value))} /></Field></div><div className="watermark-preview" aria-live="polite"><span style={{ opacity: watermarkOpacity, transform: `rotate(${watermarkAngle}deg)`, fontSize: `${Math.min(30, Math.max(14, watermarkSize * 0.55))}px` }}>{watermark.trim() || 'Your watermark'}</span><small>Preview</small></div></div>}
+      {tool.slug === 'add-watermark' && <div className="watermark-fields">
+        <section className={`free-pro-card${freePro ? ' is-active' : ''}`} aria-live="polite">
+          <div><span className="eyebrow">{freePro ? '✓ Pro activated' : 'Pro features'}</span><strong>{freePro ? 'Advanced watermark tools unlocked' : 'Unlock advanced watermark tools — FREE'}</strong><p>Pro is free. Advanced tools are supported by advertising; no payment or card is required.</p></div>
+          {!freePro && <button type="button" className="button button-primary" onClick={activateFreePro}><Unlock size={15} />Activate Free Pro</button>}
+        </section>
+        <div className="free-ad-slot" aria-label="Advertisement placement reserved">Free access supported by ads <span>Ad placement reserved</span></div>
+        <div className="option-grid">
+          <Field label="Watermark text"><input className="text-input" maxLength={80} value={watermark} onChange={(event) => setWatermark(event.target.value)} placeholder="Enter a short label" /></Field>
+          <Field label="Position"><select className="text-input" value={watermarkPosition} onChange={(event) => setWatermarkPosition(event.target.value as WatermarkPosition)}><option value="center">Center</option><option value="top-left">Top left</option><option value="top-center">Top center</option><option value="top-right">Top right</option><option value="center-left">Center left</option><option value="center-right">Center right</option><option value="bottom-left">Bottom left</option><option value="bottom-center">Bottom center</option><option value="bottom-right">Bottom right</option><option value="header">Header</option><option value="footer">Footer</option></select></Field>
+          <Field label="Text size"><input className="text-input" type="number" min={10} max={100} value={watermarkSize} onChange={(event) => setWatermarkSize(Math.max(10, Math.min(100, Number(event.target.value) || 10)))} /></Field>
+          <Field label={`Opacity · ${Math.round(watermarkOpacity * 100)}%`}><input type="range" min={0.08} max={0.9} step={0.02} value={watermarkOpacity} onChange={(event) => setWatermarkOpacity(Number(event.target.value))} /></Field>
+          <Field label={`Rotation · ${watermarkAngle}°`}><input type="range" min={-60} max={60} step={5} value={watermarkAngle} onChange={(event) => setWatermarkAngle(Number(event.target.value))} /></Field>
+        </div>
+        <fieldset className="pro-watermark-settings" disabled={!freePro}>
+          <legend><Sparkles size={15} />Pro watermark styles</legend>
+          {!freePro && <p className="selection-summary">Activate Free Pro to choose styles, colors, tile patterns, and image watermarks.</p>}
+          <div className="watermark-style-grid">{watermarkStyles.map((style) => <button key={style.id} type="button" className={`watermark-style-card${watermarkPreset === style.id ? ' is-selected' : ''}`} onClick={() => applyWatermarkPreset(style.id)} aria-pressed={watermarkPreset === style.id}>
+            <span style={{ color: style.color, opacity: Math.min(.85, Math.max(.45, style.opacity + .3)), fontFamily: style.font === 'TimesRoman' ? 'Georgia,serif' : style.font === 'Courier' ? 'monospace' : 'Arial,sans-serif', fontWeight: style.bold ? 800 : 400, transform: `rotate(${style.angle}deg)`, fontSize: `${Math.min(18, Math.max(9, style.size / 3))}px`, letterSpacing: style.id === 'stamp' ? '.12em' : undefined }}>{style.text}</span>
+            <small>{style.label}</small>
+          </button>)}</div>
+          <div className="watermark-mode-tabs" role="group" aria-label="Watermark type"><button type="button" className={watermarkMode === 'text' ? 'is-selected' : ''} onClick={() => setWatermarkMode('text')}>Text watermark</button><button type="button" className={watermarkMode === 'image' ? 'is-selected' : ''} onClick={() => setWatermarkMode('image')}><ImageIcon size={14} />Image watermark</button></div>
+          {watermarkMode === 'text' ? <div className="option-grid">
+            <Field label="Font"><select className="text-input" value={watermarkFont} onChange={(event) => setWatermarkFont(event.target.value as TextWatermarkOptions['font'])}><option value="Helvetica">Modern sans</option><option value="TimesRoman">Elegant serif</option><option value="Courier">Typewriter</option></select></Field>
+            <Field label="Custom text color"><input className="text-input color-input" type="color" value={watermarkColor} onChange={(event) => setWatermarkColor(event.target.value)} /></Field>
+            <label className="check-field"><input type="checkbox" checked={watermarkBold} onChange={(event) => setWatermarkBold(event.target.checked)} />Bold appearance</label>
+            <label className="check-field"><input type="checkbox" checked={watermarkTiled} onChange={(event) => setWatermarkTiled(event.target.checked)} />Repeat across every page</label>
+            <label className="check-field"><input type="checkbox" checked={watermarkOutline} onChange={(event) => setWatermarkOutline(event.target.checked)} />Stamp / outlined appearance</label>
+          </div> : <div className="option-grid">
+            <Field label="Watermark image (PNG, JPG, WEBP)"><input className="text-input image-file-input" type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setWatermarkImage(event.target.files?.[0] ?? null)} /></Field>
+            <Field label={`Image width · ${imageWatermarkSize} pt`}><input type="range" min="50" max="500" step="10" value={imageWatermarkSize} onChange={(event) => setImageWatermarkSize(Number(event.target.value))} /></Field>
+            <label className="check-field"><input type="checkbox" checked={watermarkTiled} onChange={(event) => setWatermarkTiled(event.target.checked)} />Tile image across every page</label>
+          </div>}
+        </fieldset>
+        <div className="watermark-preview" aria-live="polite">
+          {watermarkTiled && freePro ? <div className="watermark-preview-tiled" aria-label={watermarkMode === 'image' ? 'Repeated image watermark preview' : 'Repeated text watermark preview'}>{Array.from({ length: 9 }, (_, index) => watermarkMode === 'image' && watermarkImageUrl ? <img key={index} src={watermarkImageUrl} alt="" style={{ opacity: watermarkOpacity, transform: `rotate(${watermarkAngle}deg)`, width: `${Math.min(72, Math.max(24, imageWatermarkSize * 0.18))}px` }} /> : <span key={index} style={{ opacity: watermarkOpacity, transform: `rotate(${watermarkAngle}deg)`, fontSize: `${Math.min(17, Math.max(8, watermarkSize * 0.3))}px`, color: watermarkColor, fontWeight: watermarkBold ? 800 : 400 }}>{watermark.trim() || 'WATERMARK'}</span>)}</div>
+            : <span style={{ ...watermarkPreviewPlacement, opacity: watermarkOpacity, fontSize: `${watermarkMode === 'image' ? Math.min(30, Math.max(14, imageWatermarkSize * 0.2)) : Math.min(30, Math.max(14, watermarkSize * 0.55))}px`, color: freePro ? watermarkColor : '#3d616e', fontFamily: watermarkFont === 'TimesRoman' ? 'Georgia,serif' : watermarkFont === 'Courier' ? 'monospace' : 'Manrope,sans-serif', fontWeight: watermarkBold ? 800 : 400 }}>{watermarkMode === 'image' && watermarkImageUrl && freePro ? <img src={watermarkImageUrl} alt="Watermark image preview" /> : watermark.trim() || 'Your watermark'}</span>}
+          <small>Live page preview · {watermarkPosition.replaceAll('-', ' ')}</small>
+        </div>
+      </div>}
     </div>}
 
     {tool.slug === 'pdf-text-extractor' && extractedText && <section className="extracted-text-card"><div className="section-mini-heading"><div><h3>Extracted text</h3><span>{extractedText.length.toLocaleString()} characters</span></div><button type="button" className="button button-secondary button-small" onClick={async () => { try { await navigator.clipboard.writeText(extractedText); setCopied(true); } catch { setCopied(false); } }}><Clipboard size={15} />{copied ? 'Copied' : 'Copy text'}</button></div><textarea readOnly value={extractedText} aria-label="Extracted PDF text" rows={10} /></section>}

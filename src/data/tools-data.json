@@ -300,6 +300,45 @@
     "multiple": false
   },
   {
+    "slug": "pdf-to-word",
+    "title": "PDF to Word",
+    "shortTitle": "PDF to Word",
+    "category": "PDF conversion",
+    "description": "Convert selectable PDF text into an editable Word document.",
+    "intro": "Turn PDF text into an editable DOCX file. Basic paragraph and emphasis styling is inferred; scanned pages need OCR before conversion.",
+    "howTo": ["Choose a text-based PDF.", "Wait while each page is converted into editable paragraphs.", "Download and review the Word document."],
+    "faqs": [{"question":"Does this preserve the exact page layout?","answer":"Text and some emphasis are preserved, but DOCX layout is rebuilt and may differ from the PDF."},{"question":"Can it convert scanned PDFs?","answer":"No. This browser-only converter reads selectable text and does not perform OCR."}],
+    "related": ["pdf-text-extractor","pdf-to-excel","pdf-to-powerpoint"],
+    "accept":"pdf",
+    "multiple":false
+  },
+  {
+    "slug": "pdf-to-excel",
+    "title": "PDF to Excel",
+    "shortTitle": "PDF to Excel",
+    "category": "PDF conversion",
+    "description": "Extract PDF text and approximate table columns in an Excel workbook.",
+    "intro": "Convert text-based PDF pages into editable Excel worksheets. The browser estimates rows and columns from text positions; review the result for complex tables.",
+    "howTo": ["Choose a text-based PDF.", "Wait while page text is organized into worksheet rows and columns.", "Download and review the Excel workbook."],
+    "faqs": [{"question":"Are PDF tables detected?","answer":"Column positions are estimated from selectable text spacing. Complex or scanned tables may need manual cleanup or OCR."},{"question":"How are multiple pages organized?","answer":"Each PDF page becomes a separate worksheet in the workbook."}],
+    "related": ["pdf-to-word","pdf-text-extractor","pdf-to-powerpoint"],
+    "accept":"pdf",
+    "multiple":false
+  },
+  {
+    "slug": "pdf-to-powerpoint",
+    "title": "PDF to PowerPoint",
+    "shortTitle": "PDF to PowerPoint",
+    "category": "PDF conversion",
+    "description": "Turn each PDF page into a PowerPoint slide that preserves its appearance.",
+    "intro": "Create one PowerPoint slide per PDF page. Slides use page images to preserve the original appearance; their page content is not editable text.",
+    "howTo": ["Choose a PDF.", "Wait while each page is rendered into a slide.", "Download and review the PowerPoint presentation."],
+    "faqs": [{"question":"Can I edit the slide text?","answer":"Each slide is a high-quality image of its PDF page, so the appearance is preserved but the original text is not individually editable."},{"question":"What happens with pages of different sizes?","answer":"Pages are fitted proportionally onto widescreen slides. The page artwork stays centered without distortion."}],
+    "related": ["pdf-to-word","pdf-to-excel","pdf-to-jpg"],
+    "accept":"pdf",
+    "multiple":false
+  },
+  {
     "slug": "compress-pdf",
     "title": "Compress PDF",
     "shortTitle": "Compress PDF",
@@ -451,15 +490,15 @@
   },
   {
     "slug": "add-watermark",
-    "title": "Add a Text Watermark to PDF",
+    "title": "Watermark PDF",
     "shortTitle": "Watermark",
     "category": "PDF editing",
-    "description": "Place a customizable text watermark on every PDF page.",
-    "intro": "Add a text label to every page with controls for position, size, opacity, and angle. Preview the settings in the controls before saving.",
+    "description": "Add polished text or image watermarks to PDF pages with a live preview.",
+    "intro": "Add a text or image watermark to every page. Preview the placement, then activate Free Pro to unlock style presets, custom colors, and tiled marks.",
     "howTo": [
-      "Choose a PDF and enter watermark text.",
-      "Set position, size, opacity, and angle.",
-      "Apply the watermark and download the new PDF."
+      "Choose a PDF and select a text or image watermark.",
+      "Adjust the preview, or activate Free Pro for presets and advanced styling.",
+      "Apply the watermark and download the validated PDF."
     ],
     "faqs": [
       {

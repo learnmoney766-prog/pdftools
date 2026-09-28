@@ -3,7 +3,7 @@ import toolData from './tools-data.json';
 export type ToolCategory = 'PDF organization' | 'PDF conversion' | 'PDF optimization' | 'PDF information' | 'PDF editing';
 export type ToolSlug =
   | 'merge-pdf' | 'split-pdf' | 'extract-pdf-pages' | 'delete-pdf-pages' | 'reorder-pdf-pages' | 'rotate-pdf'
-  | 'jpg-to-pdf' | 'png-to-pdf' | 'pdf-to-jpg' | 'pdf-to-png' | 'compress-pdf'
+  | 'jpg-to-pdf' | 'png-to-pdf' | 'pdf-to-jpg' | 'pdf-to-png' | 'pdf-to-word' | 'pdf-to-excel' | 'pdf-to-powerpoint' | 'compress-pdf'
   | 'pdf-page-counter' | 'pdf-metadata' | 'pdf-text-extractor' | 'add-page-numbers' | 'add-watermark';
 
 export interface ToolSpec {

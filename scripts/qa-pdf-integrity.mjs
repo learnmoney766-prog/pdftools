@@ -4,10 +4,17 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
+import ExcelJS from 'exceljs';
+import JSZip from 'jszip';
+import { createCanvas, DOMMatrix, ImageData, loadImage, Path2D } from '@napi-rs/canvas';
 import {
-  addPageNumbers, addWatermark, imagesToPdf, makePdfFromPages, makePdfWithoutPages,
-  loadPdf, mergePdfs, parsePageRanges, readMetadata, rotatePdf, validateFiles,
+  addImageWatermark, addPageNumbers, addWatermark, compressPdfAsImages, extractText, imagesToPdf, makePdfFromPages, makePdfWithoutPages,
+  loadPdf, makeZip, mergePdfs, parsePageRanges, readMetadata, renderPagesToImages, rotatePdf, validateFiles,
 } from '../src/lib/pdf.ts';
+import { pdfToExcel } from '../src/lib/convert-excel.ts';
+import { pdfToPowerPoint } from '../src/lib/convert-powerpoint.ts';
+import { pdfToWord } from '../src/lib/convert-word.ts';
+import { FREE_PRO_STORAGE_KEY, isFreeProActivated, persistFreeProActivation } from '../src/lib/free-pro.ts';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, '..');
@@ -39,6 +46,15 @@ const emptyFile = await input('empty.pdf');
 const corruptedFile = await input('corrupted.pdf');
 const watermarkXrefFile = await input('watermark-xref-bug.pdf');
 let checks = 0;
+
+const storedValues = new Map();
+const fakeStorage = { getItem: (key) => storedValues.get(key) ?? null, setItem: (key, value) => storedValues.set(key, value) };
+assert.equal(isFreeProActivated(fakeStorage), false);
+assert.equal(persistFreeProActivation(fakeStorage), true);
+assert.equal(storedValues.get(FREE_PRO_STORAGE_KEY), 'activated');
+assert.equal(isFreeProActivated(fakeStorage), true);
+checks += 1;
+console.log('PASS Free Pro activation storage: free activation persists across component sessions with no payment state');
 
 assert.throws(() => validateFiles([], 'pdf'), /Choose a file/);
 assert.throws(() => validateFiles([emptyFile], 'pdf'), /empty/);
@@ -172,6 +188,9 @@ for (const [name, text, size, opacity, angle, position, file] of watermarkCases)
 const eightyCharacterWatermark = '1234567890'.repeat(8);
 await verifyPdf('watermark-80-chars-large-page', await addWatermark(rangeFile, eightyCharacterWatermark, 100, 0.7, 45, 'center', signal), 10, undefined, ['1234567890']);
 await verifyPdf('watermark-repaired-xref-fixture', await addWatermark(watermarkXrefFile, 'AUDIT REGRESSION', 36, 0.4, 45, 'center', signal), 1, undefined, ['Hello World!', 'CONFIDENTIAL', 'AUDIT REGRESSION']);
+const watermarkPositions = ['top-left', 'top-center', 'top-right', 'center-left', 'center', 'center-right', 'bottom-left', 'bottom-center', 'bottom-right'];
+for (const [index, position] of watermarkPositions.entries()) await verifyPdf(`watermark-position-${index + 1}`, await addWatermark(alpha, `POSITION ${index + 1}`, 22, 0.35, 0, position, signal), 2, undefined, [`POSITION ${index + 1}`]);
+await verifyPdf('tiled-text-watermark', await addWatermark(alpha, 'REPEATED REVIEW', 22, 0.2, -32, 'center', signal, { color: '#4a7186', tiled: true }), 2, undefined, ['REPEATED REVIEW']);
 await assert.rejects(addWatermark(smallPageFile, 'THIS WATERMARK IS TOO LONG FOR A TINY PAGE', 100, 0.7, 45, 'center', signal), /too long to fit legibly/);
 
 let unsupportedUnicodeError;
@@ -198,4 +217,132 @@ await verifyPdf('png-jpg-letter-portrait', letterImages, 2, (doc) => {
 const oddImage = new File([new Uint8Array(await jpg.arrayBuffer())], 'odd name & résumé (draft).jpg', { type: 'image/jpeg' });
 await verifyPdf('odd-name-image-to-pdf', await imagesToPdf([oddImage], 'fit', 'landscape', signal), 1);
 
-console.log(JSON.stringify({ checks, outputDirectory: outDir, unsupportedUnicodeError }, null, 2));
+const imagePdfBytes = await imagesToPdf([png, jpg], 'fit', 'portrait', signal);
+const imageSourceFile = new File([await imagePdfBytes.arrayBuffer()], 'images in pages.pdf', { type: 'application/pdf' });
+await verifyPdf('watermark-pdf-containing-images', await addWatermark(imageSourceFile, 'IMAGE REVIEW', 32, 0.3, -30, 'center', signal), 2, undefined, ['IMAGE REVIEW']);
+
+const tableDoc = await PDFDocument.create();
+const tableFonts = await Promise.all([StandardFonts.HelveticaBold, StandardFonts.Courier, StandardFonts.TimesRoman].map((fontName) => tableDoc.embedFont(fontName)));
+for (const [pageNo, dimensions] of [[1, [612, 792]], [2, [350, 540]]]) {
+  const [width, height] = dimensions;
+  const page = tableDoc.addPage([width, height]);
+  page.drawText(`TABLE PAGE ${pageNo}`, { x: 25, y: height - 40, size: 17, font: tableFonts[0] });
+  page.drawText('Item', { x: 25, y: height - 90, size: 12, font: tableFonts[0] });
+  page.drawText('Quantity', { x: 190, y: height - 90, size: 12, font: tableFonts[0] });
+  page.drawText('Total', { x: 285, y: height - 90, size: 12, font: tableFonts[0] });
+  for (let row = 0; row < 4; row += 1) {
+    const y = height - 118 - row * 24;
+    page.drawText(`Product ${row + 1}`, { x: 25, y, size: 11, font: tableFonts[1] });
+    page.drawText(String(row + 2), { x: 190, y, size: 11, font: tableFonts[2] });
+    page.drawText(`$${(row + 2) * 12}.00`, { x: 285, y, size: 11, font: tableFonts[1] });
+  }
+}
+const tableFile = new File([await tableDoc.save()], 'table and multiple fonts.pdf', { type: 'application/pdf' });
+await verifyPdf('watermark-pdf-containing-tables-fonts-and-mixed-sizes', await addWatermark(tableFile, 'TABLE REVIEW', 31, 0.24, 35, 'center', signal), 2, (doc) => {
+  assert.deepEqual(doc.getPages().map((page) => [page.getWidth(), page.getHeight()]), [[612, 792], [350, 540]]);
+}, ['TABLE REVIEW']);
+
+const transparentCanvas = createCanvas(24, 24);
+Object.assign(globalThis, {
+  DOMMatrix, ImageData, Path2D,
+  document: { createElement: (name) => name === 'canvas' ? createCanvas(1, 1) : (() => { throw new Error(`Unsupported test element ${name}`); })() },
+  createImageBitmap: async (file) => { const image = await loadImage(Buffer.from(await file.arrayBuffer())); image.close = () => undefined; return image; },
+});
+const transparentContext = transparentCanvas.getContext('2d');
+transparentContext.clearRect(0, 0, 24, 24);
+transparentContext.fillStyle = '#158575';
+transparentContext.globalAlpha = 0.6;
+transparentContext.beginPath(); transparentContext.arc(12, 12, 9, 0, Math.PI * 2); transparentContext.fill();
+const transparentPng = new File([transparentCanvas.toBuffer('image/png')], 'transparent-logo.png', { type: 'image/png' });
+const transparentWatermark = await addImageWatermark(alpha, transparentPng, { opacity: 0.45, size: 90, angle: 22, position: 'center', tiled: false }, signal);
+await verifyPdf('transparent-png-image-watermark', transparentWatermark, 2, undefined, ['ALPHA LANDSCAPE PAGE ONE']);
+const webpFile = new File([transparentCanvas.toBuffer('image/webp')], 'transparent-logo.webp', { type: 'image/webp' });
+const webpWatermark = await addImageWatermark(alpha, webpFile, { opacity: 0.38, size: 80, angle: -10, position: 'top-right', tiled: false }, signal);
+await verifyPdf('webp-image-watermark-converted-to-png', webpWatermark, 2, undefined, ['ALPHA LANDSCAPE PAGE ONE']);
+const tiledWatermark = await addImageWatermark(alpha, jpg, { opacity: 0.25, size: 72, angle: 0, position: 'center', tiled: true }, signal);
+await verifyPdf('tiled-jpg-image-watermark', tiledWatermark, 2, undefined, ['ALPHA LANDSCAPE PAGE ONE']);
+const presetWatermark = await addWatermark(alpha, 'DRAFT', 48, 0.3, -35, 'center', signal, { color: '#934735', font: 'TimesRoman', bold: false, outline: true });
+await verifyPdf('custom-style-watermark', presetWatermark, 2, undefined, ['DRAFT']);
+
+const progress = [];
+const converterInput = await input('alpha.pdf');
+const renderer = async () => pdfjs;
+const extractedText = await extractText(converterInput, signal, (done, total) => progress.push(`text:${done}/${total}`), renderer);
+assert.ok(extractedText.includes('ALPHA LANDSCAPE PAGE ONE') && extractedText.includes('ALPHA PORTRAIT PAGE TWO'));
+assert.equal(progress.filter((item) => item.startsWith('text:')).length, 2);
+checks += 2;
+console.log('PASS existing PDF text extractor: two pages of selectable text extracted with page progress');
+
+const pageImages = await renderPagesToImages(converterInput, [1, 2], 'png', 1, 0.9, signal, (done, total) => progress.push(`image:${done}/${total}`), renderer);
+assert.equal(pageImages.length, 2);
+for (const image of pageImages) {
+  const bytes = new Uint8Array(await image.blob.arrayBuffer());
+  assert.deepEqual([...bytes.slice(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+}
+const imageZip = await makeZip(pageImages);
+const reopenedImageZip = await JSZip.loadAsync(imageZip);
+assert.equal(Object.keys(reopenedImageZip.files).filter((name) => name.endsWith('.png')).length, 2);
+assert.ok(imageZip.size > 2000);
+checks += 3;
+console.log(`PASS existing PDF-to-PNG: ${pageImages.length} images rendered with valid PNG signatures and a reopened ZIP`);
+const jpgPages = await renderPagesToImages(converterInput, [1], 'jpeg', 1, 0.85, signal, () => undefined, renderer);
+const jpgBytes = new Uint8Array(await jpgPages[0].blob.arrayBuffer());
+assert.deepEqual([...jpgBytes.slice(0, 3)], [255, 216, 255]);
+const jpgZip = await makeZip(jpgPages);
+assert.ok(Object.keys((await JSZip.loadAsync(jpgZip)).files).some((name) => name.endsWith('.jpg')));
+checks += 2;
+console.log('PASS existing PDF-to-JPG: valid JPEG signature and reopened ZIP entry');
+
+const compressedPdf = await compressPdfAsImages(converterInput, 0.72, 0.75, signal, (done, total) => progress.push(`compress:${done}/${total}`), renderer);
+await verifyPdf('compressed-alpha-raster-pages', compressedPdf, 2, (doc) => assert.equal(doc.getPageCount(), 2));
+console.log(`PASS existing image-based compression: ${compressedPdf.size} bytes, 2-page PDF reopened`);
+
+const word = await pdfToWord(converterInput, signal, (done, total) => progress.push(`word:${done}/${total}`), renderer);
+assert.ok(word.blob.size > 200);
+assert.ok(word.name.endsWith('.docx'));
+const wordZip = await JSZip.loadAsync(word.blob);
+assert.ok(wordZip.file('[Content_Types].xml') && wordZip.file('word/document.xml'));
+const wordXml = await wordZip.file('word/document.xml').async('string');
+assert.ok(wordXml.includes('ALPHA LANDSCAPE PAGE ONE'));
+assert.ok(wordXml.includes('ALPHA PORTRAIT PAGE TWO'));
+await writeFile(path.join(outDir, word.name), new Uint8Array(await word.blob.arrayBuffer()));
+checks += 4;
+console.log(`PASS PDF to Word: ${word.blob.size} bytes, ${progress.filter((item) => item.startsWith('word:')).length} pages, DOCX package reopened and text checked`);
+
+const excel = await pdfToExcel(converterInput, signal, (done, total) => progress.push(`excel:${done}/${total}`), renderer);
+assert.ok(excel.blob.size > 200);
+assert.ok(excel.name.endsWith('.xlsx'));
+const workbook = new ExcelJS.Workbook();
+await workbook.xlsx.load(await excel.blob.arrayBuffer());
+assert.equal(workbook.worksheets.length, 2);
+assert.ok(workbook.getWorksheet('Page 1').getRow(1).values.join(' ').includes('ALPHA LANDSCAPE PAGE ONE'));
+await writeFile(path.join(outDir, excel.name), new Uint8Array(await excel.blob.arrayBuffer()));
+checks += 4;
+console.log(`PASS PDF to Excel: ${excel.blob.size} bytes, ${workbook.worksheets.length} worksheets reopened with ExcelJS and cell content checked`);
+const tableWorkbookFile = await pdfToExcel(tableFile, signal, () => undefined, renderer);
+const tableWorkbook = new ExcelJS.Workbook();
+await tableWorkbook.xlsx.load(await tableWorkbookFile.blob.arrayBuffer());
+await writeFile(path.join(outDir, tableWorkbookFile.name), new Uint8Array(await tableWorkbookFile.blob.arrayBuffer()));
+const firstSheetRows = tableWorkbook.worksheets[0].getSheetValues().map((row) => Array.isArray(row) ? row.map(String).join(' | ') : '');
+assert.ok(firstSheetRows.some((row) => row.includes('Item') && row.includes('Quantity') && row.includes('Total')));
+assert.ok(firstSheetRows.some((row) => row.includes('Product 1')));
+checks += 2;
+console.log('PASS PDF table extraction: column-separated headers and product rows recovered into XLSX cells');
+await assert.rejects(pdfToWord(imageSourceFile, signal, () => undefined, renderer), /Scanned PDFs need OCR/);
+checks += 1;
+console.log('PASS scanned PDF Word conversion rejection: clear OCR limitation and no empty DOCX output');
+
+Object.assign(globalThis, { DOMMatrix, ImageData, Path2D, document: { createElement: (name) => name === 'canvas' ? createCanvas(1, 1) : (() => { throw new Error(`Unsupported test element ${name}`); })() } });
+const presentation = await pdfToPowerPoint(converterInput, signal, (done, total) => progress.push(`pptx:${done}/${total}`), renderer);
+assert.ok(presentation.blob.size > 200);
+assert.ok(presentation.name.endsWith('.pptx'));
+const pptZip = await JSZip.loadAsync(presentation.blob);
+assert.ok(pptZip.file('ppt/presentation.xml'));
+const slideEntries = Object.keys(pptZip.files).filter((name) => /^ppt\/slides\/slide\d+\.xml$/.test(name));
+assert.equal(slideEntries.length, 2);
+assert.ok(Object.keys(pptZip.files).filter((name) => name.startsWith('ppt/media/')).length >= 2);
+await writeFile(path.join(outDir, presentation.name), new Uint8Array(await presentation.blob.arrayBuffer()));
+checks += 4;
+console.log(`PASS PDF to PowerPoint: ${presentation.blob.size} bytes, ${slideEntries.length} slides, PPTX package reopened and slide images checked`);
+
+console.log(JSON.stringify({ checks, outputDirectory: outDir, unsupportedUnicodeError, officeOutputs: [word.name, excel.name, presentation.name] }, null, 2));

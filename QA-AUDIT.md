@@ -65,3 +65,20 @@ The supplied PDF reproduced the failure: its xref stream declared `/Size 17` whi
 ## Recommendation
 
 The tested PDF generation paths and production watermark flow show no remaining corruption in the exercised cases, and the production build succeeds. The toolkit is **not yet ready for an unconditional deployment sign-off**: PDF-to-JPG, PDF-to-PNG, and compression need a production browser rerun, and the reported original watermark failure should be tested against the actual source PDF/output if available. The ZIP validator and PDF byte validation are in place to prevent known-invalid outputs from being offered as success.
+
+## Follow-up: conversion features and expanded regression run (2026-09-28)
+
+The project was extended with PDF-to-Word, PDF-to-Excel, and PDF-to-PowerPoint conversions. The test suite now creates actual DOCX/XLSX/PPTX package files, reopens and inspects their ZIP structures and expected content, and checks them with independent Python readers (`python-docx`, `openpyxl`, and `python-pptx`). PDF-to-PowerPoint pages are slide images; Word and Excel layout are best-effort text/table reconstructions and do not preserve the original layout exactly. Scanned PDFs without extractable text are rejected for Word conversion because OCR is not implemented.
+
+A new tiled-watermark regression test exposed that the repeated labels were all placed outside the page. The tile coordinate origin was corrected. The repeated watermark now appears in extracted PDF text and the generated file reopens successfully.
+
+| Tool | Input tested | Output generated | Output reopened | Content checked | Status |
+|---|---|---|---|---|---|
+| PDF to Word | Two-page selectable-text fixture; scanned-only rejection | DOCX | ZIP package validation and python-docx | Page text and page breaks; no empty document on scanned input | PASS |
+| PDF to Excel | Two-page text and table fixture | XLSX | ExcelJS and openpyxl | Worksheet count, headers, rows and cells | PASS |
+| PDF to PowerPoint | Two-page fixture | PPTX | ZIP package validation and python-pptx | Slide count and embedded slide images | PASS |
+| Add Watermark | All nine positions, tiled text, prior text/image cases | PDF | pdf-lib, PDF.js, Poppler | Repeated text extraction, dimensions, pages and content | PASS |
+
+The refreshed `pnpm run qa:pdf-integrity` run passed 84 assertions and produced 57 PDFs, all parsed by Poppler `pdfinfo`. `pnpm run typecheck` passed. The production build passed and generated 23 direct route HTML pages. It reports a large-chunk warning for the lazily loaded ExcelJS converter (930.53 kB raw, 257.01 kB gzip); this is a performance consideration, not a build failure. The new conversion and contact/watermark route pages were smoke-checked in production preview. Browser file selection and downloads were not driven for the new converters; those workflows were instead verified at helper level with real output bytes and independent readers. The older BLOCKED designations above remain for production-browser reruns of PDF-to-JPG, PDF-to-PNG, and compression.
+
+The Free Pro activation is a client-side, no-payment feature switch stored in local storage. The ad placement is a placeholder; an advertising provider and its configuration are not included.

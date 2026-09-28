@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowRight, Check, Combine, FileImage, FileSearch, FileText, Hash, Image, LockKeyhole, Minimize2, RotateCw, ScanText, Scissors, Search, ShieldCheck, Stamp, WandSparkles } from 'lucide-react';
+import { ArrowDown, ArrowRight, Check, Combine, FileImage, FileSearch, FileSpreadsheet, FileText, FileType2, Hash, Image, LockKeyhole, Minimize2, Presentation, RotateCw, ScanText, Scissors, Search, ShieldCheck, Stamp, WandSparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { categories, tools, toolHref } from '../data/tools';
 import type { ToolSlug } from '../data/tools';
@@ -8,7 +8,7 @@ import { useSeo } from '../useSeo';
 const icons: Record<ToolSlug, typeof FileText> = {
   'merge-pdf': Combine, 'split-pdf': Scissors, 'extract-pdf-pages': FileSearch, 'delete-pdf-pages': FileText,
   'reorder-pdf-pages': WandSparkles, 'rotate-pdf': RotateCw, 'jpg-to-pdf': Image, 'png-to-pdf': Image,
-  'pdf-to-jpg': FileImage, 'pdf-to-png': FileImage, 'compress-pdf': Minimize2, 'pdf-page-counter': Hash,
+  'pdf-to-jpg': FileImage, 'pdf-to-png': FileImage, 'pdf-to-word': FileType2, 'pdf-to-excel': FileSpreadsheet, 'pdf-to-powerpoint': Presentation, 'compress-pdf': Minimize2, 'pdf-page-counter': Hash,
   'pdf-metadata': FileSearch, 'pdf-text-extractor': ScanText, 'add-page-numbers': Hash, 'add-watermark': Stamp,
 };
 
