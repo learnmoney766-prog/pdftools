@@ -6,7 +6,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
 const tools = JSON.parse(await readFile(path.join(root, 'src/data/tools-data.json'), 'utf8'));
 const template = await readFile(path.join(dist, 'index.html'), 'utf8');
-const baseUrl = process.env.SITE_URL?.trim() || process.env.VITE_SITE_URL?.trim() || '';
+const baseUrl = process.env.SITE_URL?.trim() || process.env.VITE_SITE_URL?.trim() || process.env.URL?.trim() || '';
 let origin = '';
 if (baseUrl) {
   const parsed = new URL(baseUrl);

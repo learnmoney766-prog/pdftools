@@ -63,9 +63,9 @@ pnpm run build
 pnpm preview
 ```
 
-Deploy the `dist/` directory to a static host. Netlify and Vercel work with the included route setup. For a production sitemap and build-time canonical tags, set `SITE_URL` to the real HTTPS origin before the build, for example `SITE_URL=https://pdf.example.org`. The project does not assume a domain, so a build without `SITE_URL` omits the sitemap and absolute canonical tags instead of publishing placeholder URLs. The running app sets canonical and Open Graph URLs from its actual origin.
+Deploy the `dist/` directory to a static host. Netlify settings are checked into `netlify.toml`: `pnpm run build`, publish directory `dist`, and Node.js 24. `package.json` pins pnpm 11.25.0. Netlify's `URL` build variable supplies the canonical origin and sitemap automatically. Other hosts can set `SITE_URL` to the public HTTPS origin; without either value the build omits absolute canonical tags and the sitemap rather than publishing placeholders. The running app sets canonical and Open Graph URLs from its actual origin.
 
-Netlify can use the included `public/_redirects` fallback. Vercel can serve the generated route HTML files and uses clean URLs from `vercel.json`. GitHub Pages does not provide the same route fallback by default and needs a custom 404 fallback or a hash-based routing change.
+Netlify uses the included `public/_redirects` SPA fallback as well as the generated direct-route HTML files. PDF processing, conversion, and downloads run entirely in the visitor's browser, so the app does not require Netlify Functions, API keys, a backend service, Python, or server-side filesystem access. Vercel can serve the generated route HTML files and uses clean URLs from `vercel.json`. GitHub Pages does not provide the same route fallback by default and needs a custom 404 fallback or a hash-based routing change.
 
 ## Routes
 
