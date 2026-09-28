@@ -1,0 +1,482 @@
+[
+  {
+    "slug": "merge-pdf",
+    "title": "Merge PDF Files",
+    "shortTitle": "Merge PDF",
+    "category": "PDF organization",
+    "description": "Combine multiple PDFs into one file in the order you choose.",
+    "intro": "Bring reports, forms, or scanned documents together in one tidy PDF. Arrange the files first; their pages are added in that order.",
+    "howTo": [
+      "Choose two or more PDF files.",
+      "Use the arrows to set the file order.",
+      "Select Merge PDFs and download the combined document."
+    ],
+    "faqs": [
+      {
+        "question": "Can I change the order before merging?",
+        "answer": "Yes. Move files up or down in the list before you merge. The output follows that order."
+      },
+      {
+        "question": "Are my files uploaded?",
+        "answer": "No. The PDFs are read and combined locally in this browser tab."
+      }
+    ],
+    "related": [
+      "split-pdf",
+      "extract-pdf-pages",
+      "reorder-pdf-pages"
+    ],
+    "accept": "pdf",
+    "multiple": true
+  },
+  {
+    "slug": "split-pdf",
+    "title": "Split PDF by Page Range",
+    "shortTitle": "Split PDF",
+    "category": "PDF organization",
+    "description": "Save a chosen range or set of pages as a separate PDF.",
+    "intro": "Choose exactly which pages to keep, using single pages and ranges such as 1-3, 7. The selected pages are saved in their original order.",
+    "howTo": [
+      "Choose a PDF and check its page count.",
+      "Enter pages like 1-3, 7, 9-10.",
+      "Select Extract pages and save the new PDF."
+    ],
+    "faqs": [
+      {
+        "question": "Which page range formats work?",
+        "answer": "Enter page numbers separated by commas. A hyphen marks a continuous range, for example 1-3, 7, 9-10."
+      },
+      {
+        "question": "Can I create several separate files at once?",
+        "answer": "This tool creates one PDF containing the ranges you select, in document order."
+      }
+    ],
+    "related": [
+      "extract-pdf-pages",
+      "delete-pdf-pages",
+      "merge-pdf"
+    ],
+    "accept": "pdf",
+    "multiple": false
+  },
+  {
+    "slug": "extract-pdf-pages",
+    "title": "Extract PDF Pages",
+    "shortTitle": "Extract pages",
+    "category": "PDF organization",
+    "description": "Pick individual pages and save them in a new PDF.",
+    "intro": "Keep only the pages you need. Select page thumbnails or use the select all control; the extracted pages stay in their original order.",
+    "howTo": [
+      "Choose a PDF.",
+      "Select the page thumbnails to keep.",
+      "Extract and download the smaller PDF."
+    ],
+    "faqs": [
+      {
+        "question": "Will the pages keep their original order?",
+        "answer": "Yes. Pages are copied in the order they appear in the original PDF."
+      },
+      {
+        "question": "Can I extract one page?",
+        "answer": "Yes. Select a single page and create a one-page PDF."
+      }
+    ],
+    "related": [
+      "split-pdf",
+      "delete-pdf-pages",
+      "reorder-pdf-pages"
+    ],
+    "accept": "pdf",
+    "multiple": false
+  },
+  {
+    "slug": "delete-pdf-pages",
+    "title": "Delete PDF Pages",
+    "shortTitle": "Delete pages",
+    "category": "PDF organization",
+    "description": "Remove selected pages and download the remaining PDF.",
+    "intro": "Select pages to remove while keeping the rest of the document in order. At least one page must remain in the result.",
+    "howTo": [
+      "Choose a PDF.",
+      "Select the page thumbnails to remove.",
+      "Review how many pages remain, then download."
+    ],
+    "faqs": [
+      {
+        "question": "Can I remove more than one page?",
+        "answer": "Yes. Select any number of pages as long as at least one page remains."
+      },
+      {
+        "question": "Can I undo the selection?",
+        "answer": "Use Clear selection to start again before processing."
+      }
+    ],
+    "related": [
+      "extract-pdf-pages",
+      "split-pdf",
+      "reorder-pdf-pages"
+    ],
+    "accept": "pdf",
+    "multiple": false
+  },
+  {
+    "slug": "reorder-pdf-pages",
+    "title": "Reorder PDF Pages",
+    "shortTitle": "Reorder pages",
+    "category": "PDF organization",
+    "description": "Change the page order with drag and drop or move controls.",
+    "intro": "Arrange pages into a more useful order. Drag a page to move it, or use the arrow controls for precise keyboard-friendly reordering.",
+    "howTo": [
+      "Choose a PDF and wait for page previews.",
+      "Drag pages, or use each card’s move buttons.",
+      "Save the reordered PDF."
+    ],
+    "faqs": [
+      {
+        "question": "Can I reorder pages on a phone?",
+        "answer": "Yes. Use the up and down controls on each page card; they work with touch and keyboard."
+      },
+      {
+        "question": "Does reordering change page content?",
+        "answer": "No. The tool changes page order and keeps each page’s content."
+      }
+    ],
+    "related": [
+      "extract-pdf-pages",
+      "rotate-pdf",
+      "merge-pdf"
+    ],
+    "accept": "pdf",
+    "multiple": false
+  },
+  {
+    "slug": "rotate-pdf",
+    "title": "Rotate PDF Pages",
+    "shortTitle": "Rotate PDF",
+    "category": "PDF organization",
+    "description": "Rotate every page or selected pages by 90, 180, or 270 degrees.",
+    "intro": "Correct sideways or upside-down pages. Choose a rotation amount, then apply it to the whole document or only the selected pages.",
+    "howTo": [
+      "Choose a PDF.",
+      "Select pages or leave the selection empty to rotate all.",
+      "Choose the angle and save the rotated PDF."
+    ],
+    "faqs": [
+      {
+        "question": "Can I rotate just one page?",
+        "answer": "Yes. Select only that page before processing. With no pages selected, all pages are rotated."
+      },
+      {
+        "question": "Does rotation alter the content?",
+        "answer": "Rotation changes the page’s orientation in the PDF; it does not rasterize the page."
+      }
+    ],
+    "related": [
+      "reorder-pdf-pages",
+      "extract-pdf-pages",
+      "delete-pdf-pages"
+    ],
+    "accept": "pdf",
+    "multiple": false
+  },
+  {
+    "slug": "jpg-to-pdf",
+    "title": "Convert JPG to PDF",
+    "shortTitle": "JPG to PDF",
+    "category": "PDF conversion",
+    "description": "Turn one or more JPG images into a PDF document.",
+    "intro": "Create a PDF from JPG or JPEG photos. Add multiple images, arrange them, and choose a page size that suits your document.",
+    "howTo": [
+      "Choose one or more JPG or JPEG images.",
+      "Arrange the images and choose a page size.",
+      "Create and download your PDF."
+    ],
+    "faqs": [
+      {
+        "question": "Can I put several photos in one PDF?",
+        "answer": "Yes. Each image becomes a page, in the order shown."
+      },
+      {
+        "question": "Are the images uploaded?",
+        "answer": "No. Image conversion runs locally in your browser."
+      }
+    ],
+    "related": [
+      "png-to-pdf",
+      "pdf-to-jpg",
+      "pdf-to-png"
+    ],
+    "accept": "jpg",
+    "multiple": true
+  },
+  {
+    "slug": "png-to-pdf",
+    "title": "Convert PNG to PDF",
+    "shortTitle": "PNG to PDF",
+    "category": "PDF conversion",
+    "description": "Turn one or more PNG images into a PDF document.",
+    "intro": "Put PNG artwork, screenshots, or scanned pages into a PDF. Each image becomes a page and can be moved into the order you want.",
+    "howTo": [
+      "Choose one or more PNG images.",
+      "Arrange the images and choose a page size.",
+      "Create and download your PDF."
+    ],
+    "faqs": [
+      {
+        "question": "Can I convert multiple PNGs together?",
+        "answer": "Yes. Each image is placed on its own PDF page in the order shown."
+      },
+      {
+        "question": "Will transparent areas stay transparent?",
+        "answer": "PDF pages have a white background, so transparent PNG areas appear white."
+      }
+    ],
+    "related": [
+      "jpg-to-pdf",
+      "pdf-to-png",
+      "pdf-to-jpg"
+    ],
+    "accept": "png",
+    "multiple": true
+  },
+  {
+    "slug": "pdf-to-jpg",
+    "title": "Convert PDF to JPG",
+    "shortTitle": "PDF to JPG",
+    "category": "PDF conversion",
+    "description": "Render selected PDF pages as downloadable JPG images.",
+    "intro": "Turn PDF pages into JPG images for sharing or placing in another document. Choose specific pages or render the full file into a ZIP.",
+    "howTo": [
+      "Choose a PDF and select pages or all pages.",
+      "Choose a rendering size.",
+      "Download the page images together as a ZIP."
+    ],
+    "faqs": [
+      {
+        "question": "Can I convert just a few pages?",
+        "answer": "Yes. Enter page numbers or ranges, for example 1-2, 5."
+      },
+      {
+        "question": "Does converting to JPG keep selectable text?",
+        "answer": "No. JPGs are images of the pages; text is no longer selectable."
+      }
+    ],
+    "related": [
+      "pdf-to-png",
+      "jpg-to-pdf",
+      "png-to-pdf"
+    ],
+    "accept": "pdf",
+    "multiple": false
+  },
+  {
+    "slug": "pdf-to-png",
+    "title": "Convert PDF to PNG",
+    "shortTitle": "PDF to PNG",
+    "category": "PDF conversion",
+    "description": "Render selected PDF pages as downloadable PNG images.",
+    "intro": "Create crisp PNG images from your PDF pages. Select a page range or convert the whole document into a convenient ZIP download.",
+    "howTo": [
+      "Choose a PDF and select pages or all pages.",
+      "Choose a rendering size.",
+      "Download the page images together as a ZIP."
+    ],
+    "faqs": [
+      {
+        "question": "Can I convert just selected pages?",
+        "answer": "Yes. Enter page numbers or ranges before rendering."
+      },
+      {
+        "question": "Does PNG preserve PDF links or text?",
+        "answer": "No. Each PNG is a flat image of one rendered page."
+      }
+    ],
+    "related": [
+      "pdf-to-jpg",
+      "png-to-pdf",
+      "jpg-to-pdf"
+    ],
+    "accept": "pdf",
+    "multiple": false
+  },
+  {
+    "slug": "compress-pdf",
+    "title": "Compress PDF",
+    "shortTitle": "Compress PDF",
+    "category": "PDF optimization",
+    "description": "Reduce PDF size by rendering pages as compressed images.",
+    "intro": "This browser-based compressor rebuilds pages as JPEG images. It can make scanned or image-heavy files smaller, but text and vector content become images. The page shows the actual size change before you download.",
+    "howTo": [
+      "Choose a PDF and review the rasterization note.",
+      "Select an image quality.",
+      "Compress, compare file sizes, and download if the result suits you."
+    ],
+    "faqs": [
+      {
+        "question": "Will the compressed PDF stay searchable?",
+        "answer": "No. This method turns each page into an image, so selectable text, links, forms, and accessibility structure are not preserved."
+      },
+      {
+        "question": "Will every PDF get smaller?",
+        "answer": "No. The result size depends on its content and your quality setting. Actual sizes and percentage change are measured after processing."
+      }
+    ],
+    "related": [
+      "pdf-page-counter",
+      "pdf-to-jpg",
+      "merge-pdf"
+    ],
+    "accept": "pdf",
+    "multiple": false
+  },
+  {
+    "slug": "pdf-page-counter",
+    "title": "PDF Page Counter",
+    "shortTitle": "Page counter",
+    "category": "PDF information",
+    "description": "Check the number of pages and file size in a PDF.",
+    "intro": "Get a quick page count and file size from a PDF. The document is opened in your browser and no account is needed.",
+    "howTo": [
+      "Choose a PDF.",
+      "Wait for the page count and file size to appear.",
+      "Start over to inspect another file."
+    ],
+    "faqs": [
+      {
+        "question": "Does counting pages change my PDF?",
+        "answer": "No. This tool only reads basic document information."
+      },
+      {
+        "question": "Why can’t some PDFs be counted?",
+        "answer": "Password-protected or malformed documents may not be readable by the browser PDF parser."
+      }
+    ],
+    "related": [
+      "pdf-metadata",
+      "pdf-text-extractor",
+      "compress-pdf"
+    ],
+    "accept": "pdf",
+    "multiple": false
+  },
+  {
+    "slug": "pdf-metadata",
+    "title": "PDF Metadata Viewer",
+    "shortTitle": "Metadata viewer",
+    "category": "PDF information",
+    "description": "View available title, author, dates, and other PDF metadata.",
+    "intro": "Inspect the document properties stored in a PDF, including title, author, creator, producer, dates, and page count. Empty metadata fields are not shown.",
+    "howTo": [
+      "Choose a PDF.",
+      "Review the metadata found in the document.",
+      "Select another file to inspect its properties."
+    ],
+    "faqs": [
+      {
+        "question": "Why are some fields missing?",
+        "answer": "PDF metadata is optional. This page only shows values that are stored in the file."
+      },
+      {
+        "question": "Does viewing metadata upload the PDF?",
+        "answer": "No. The document is read locally in your browser."
+      }
+    ],
+    "related": [
+      "pdf-page-counter",
+      "pdf-text-extractor",
+      "compress-pdf"
+    ],
+    "accept": "pdf",
+    "multiple": false
+  },
+  {
+    "slug": "pdf-text-extractor",
+    "title": "Extract Text from PDF",
+    "shortTitle": "Text extractor",
+    "category": "PDF information",
+    "description": "Extract selectable text from a PDF and copy or save it.",
+    "intro": "Copy text embedded in a PDF into a plain text file. Scanned pages without a text layer are not recognized because this tool does not include OCR.",
+    "howTo": [
+      "Choose a text-based PDF.",
+      "Select Extract text.",
+      "Copy the text or download it as a .txt file."
+    ],
+    "faqs": [
+      {
+        "question": "Can it read scanned documents?",
+        "answer": "Not unless the scan already contains a text layer. This tool does not perform OCR."
+      },
+      {
+        "question": "Why does extracted text look different?",
+        "answer": "PDFs position text visually; line breaks and reading order can vary when text is extracted."
+      }
+    ],
+    "related": [
+      "pdf-metadata",
+      "pdf-page-counter",
+      "merge-pdf"
+    ],
+    "accept": "pdf",
+    "multiple": false
+  },
+  {
+    "slug": "add-page-numbers",
+    "title": "Add Page Numbers to PDF",
+    "shortTitle": "Page numbers",
+    "category": "PDF editing",
+    "description": "Add a starting page number at the top or bottom of each page.",
+    "intro": "Number every page in a PDF with a small, readable label. Choose the alignment and starting number before creating the updated document.",
+    "howTo": [
+      "Choose a PDF.",
+      "Pick top or bottom, alignment, and starting number.",
+      "Add the numbers and download the PDF."
+    ],
+    "faqs": [
+      {
+        "question": "Can numbering start at a number other than one?",
+        "answer": "Yes. Enter the first number to use; subsequent pages count up from there."
+      },
+      {
+        "question": "Does this replace existing page numbers?",
+        "answer": "No. New numbers are drawn over the existing page content."
+      }
+    ],
+    "related": [
+      "add-watermark",
+      "merge-pdf",
+      "rotate-pdf"
+    ],
+    "accept": "pdf",
+    "multiple": false
+  },
+  {
+    "slug": "add-watermark",
+    "title": "Add a Text Watermark to PDF",
+    "shortTitle": "Watermark",
+    "category": "PDF editing",
+    "description": "Place a customizable text watermark on every PDF page.",
+    "intro": "Add a text label to every page with controls for position, size, opacity, and angle. Preview the settings in the controls before saving.",
+    "howTo": [
+      "Choose a PDF and enter watermark text.",
+      "Set position, size, opacity, and angle.",
+      "Apply the watermark and download the new PDF."
+    ],
+    "faqs": [
+      {
+        "question": "Can I change the watermark opacity?",
+        "answer": "Yes. Use the opacity control to make the text lighter or darker."
+      },
+      {
+        "question": "Can I remove an existing watermark?",
+        "answer": "No. This tool adds text; it does not identify or remove existing marks."
+      }
+    ],
+    "related": [
+      "add-page-numbers",
+      "merge-pdf",
+      "rotate-pdf"
+    ],
+    "accept": "pdf",
+    "multiple": false
+  }
+]
